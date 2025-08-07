@@ -1,108 +1,20 @@
 import SwiftUI
 
+enum RootScreen { case upload, translation }
+
 struct MainView: View {
-    @State private var showUpload = false
+    @State private var rootScreen: RootScreen = .upload
 
     var body: some View {
-        ZStack {
-            // Gradient background with updated colors
-            LinearGradient(
-                gradient: Gradient(stops: [
-                    .init(color: Color.white, location: 0),
-                    .init(color: Color(red: 1, green: 0.73, blue: 0.27), location: 1)
-                ]),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
-
-            VStack {
-                // Logo centered horizontally
-                HStack {
-                    Image("SignAILOGO")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(height: 32)
-                }
-                .frame(maxWidth: .infinity, alignment: .center)
-                .padding(.top, 24)
-
-                HStack {
-                    VStack(alignment: .leading) {
-                        VStack(alignment: .leading, spacing: 0) {
-                            // Headline text HStack
-                            VStack(alignment: .leading, spacing: 5) {
-                                Text("Your free to use sign language translator.")
-                                    .font(Font.custom("Montserrat", size: 30).weight(.bold))
-                                    .foregroundColor(Color.orange)
-                                ZStack(alignment: .leading) {
-                                    LinearGradient(
-                                        gradient: Gradient(colors: [
-                                            Color(hex: "#FF00A1"),
-                                            Color(hex: "#FF3C00"),
-                                            Color(hex: "#A100FF"),
-                                            Color(hex: "#FFE100")
-                                        ]),
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                    .frame(height: 36)
-                                    .mask(
-                                        Text("Powered by AI.")
-                                            .font(Font.custom("Montserrat", size: 30).weight(.bold))
-                                            .fixedSize()
-                                            .frame(maxWidth: .infinity, alignment: .leading)
-                                    )
-                                }
-                                .frame(height: 36, alignment: .leading)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            }
-
-                            // Buttons aligned leading with spacing and size
-                            HStack(spacing: 16) {
-                                Button(action: { showUpload = true }) {
-                                    HStack {
-                                        Text("Start")
-                                            .font(Font.custom("Montserrat", size: 18).weight(.bold))
-                                        Image(systemName: "arrow.right")
-                                    }
-                                    .foregroundColor(.white)
-                                    .frame(width: 128, height: 44)
-                                    .background(Color.orange)
-                                    .cornerRadius(22)
-                                }
-                                .buttonStyle(PlainButtonStyle())
-
-                                Button(action: { /* Sign-in action */ }) {
-                                    HStack {
-                                        Text("Sign-in")
-                                            .font(Font.custom("Montserrat", size: 18).weight(.bold))
-                                        Image(systemName: "arrow.right")
-                                    }
-                                    .foregroundColor(Color.orange)
-                                    .frame(width: 128, height: 44)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 22)
-                                            .stroke(Color.orange, lineWidth: 2)
-                                    )
-                                }
-                                .buttonStyle(PlainButtonStyle())
-                            }
-                            .padding(.top, 28)
-                        }
-                        .frame(maxWidth: 280, alignment: .leading)
-                        .padding(.top, 48)
-
-                        Spacer()
-                    }
-                    .padding(.leading, 64)
-                    Spacer()
-                }
-            }
-            .fullScreenCover(isPresented: $showUpload) {
-                UploadView()
+        Group {
+            switch rootScreen {
+            case .upload:
+                UploadView(onNavToTranslation: { rootScreen = .translation }, onNavToUpload: { rootScreen = .upload })
+            case .translation:
+                TranslationView(translation: "Your translation here", title: "Your title here", onNavToUpload: { rootScreen = .upload }, onNavToTranslation: { rootScreen = .translation })
             }
         }
+        .animation(.easeInOut, value: rootScreen)
     }
 }
 
