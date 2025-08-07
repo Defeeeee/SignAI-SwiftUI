@@ -31,6 +31,7 @@ struct TranslationPayload: Hashable, Identifiable {
     var id = UUID()
     let text: String
     let title: String
+    let thumbnailURL: String?   // NEW
 }
 
 // MARK: - Uploader (shared logic)
@@ -49,7 +50,7 @@ final class UploadManager: ObservableObject {
     let uploadPreset = "signai"
     let translateBase = "https://signai.fdiaznem.com.ar/predict_gemini?video_url="
 
-    func processPicked(completion: @escaping (_ text: String, _ title: String) -> Void) {
+    func processPicked(completion: @escaping (_ text: String, _ title: String, _ thumbnailURL: String?) -> Void) {
         guard let item = selectedItem else { return }
         statusMessage = "Video received. Preparing upload..."
         showUploadingProgress = true
@@ -73,7 +74,7 @@ final class UploadManager: ObservableObject {
         }
     }
 
-    private func uploadVideo(_ url: URL, completion: @escaping (_ text: String, _ title: String) -> Void) async {
+    private func uploadVideo(_ url: URL, completion: @escaping (_ text: String, _ title: String, _ thumbnailURL: String?) -> Void) async {
         statusMessage = "Uploading video..."
         showUploadingProgress = true
 
@@ -112,7 +113,13 @@ final class UploadManager: ObservableObject {
             statusMessage = "Video uploaded. Sending to AI..."
             showUploadingProgress = false
             showUploadingScreen = true
-            await fetchTranslation(for: secureUrl, completion: completion)
+
+            // Try to derive a thumbnail URL from the Cloudinary secure URL
+            let thumb = deriveCloudinaryThumbnail(fromSecureURL: secureUrl)
+
+            await fetchTranslation(for: secureUrl) { text, title in
+                completion(text, title, thumb)
+            }
         } catch {
             statusMessage = nil
             showUploadingProgress = false
@@ -149,13 +156,27 @@ final class UploadManager: ObservableObject {
             showUploadingScreen = false
         }
     }
+
+    /// Cloudinary trick: insert `/so_1/` (seek to 1s) and change the extension to `.jpg`.
+    private func deriveCloudinaryThumbnail(fromSecureURL secureUrl: String) -> String? {
+        var result = secureUrl.replacingOccurrences(of: "/upload/", with: "/upload/so_1/")
+        // swap common video extensions for .jpg
+        for ext in [".mp4", ".mov", ".m4v", ".webm"] {
+            if result.lowercased().hasSuffix(ext) {
+                result = String(result.dropLast(ext.count)) + ".jpg"
+                return result
+            }
+        }
+        // if no known ext—leave as-is; Cloudinary may still serve a frame via .jpg suffix
+        return result + ".jpg"
+    }
 }
 
 // MARK: - Shared UI
 
 /// Fixed top logo bar (same size/position across screens)
 struct TopLogoBar: View {
-    private let topPadding: CGFloat = 12     // closer to top than before
+    private let topPadding: CGFloat = 12
     private let logoHeight: CGFloat = 32
     private let bottomPadding: CGFloat = 12
 
@@ -294,31 +315,6 @@ struct UploadingProgressView: View {
     }
 }
 
-struct TranslationResultView: View {
-    let summary: String
-    let translation: String
-    var titleColor: Color = Color.fromHex("#FFA369")
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text(summary)
-                .font(.headline)
-                .padding()
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(titleColor)
-                .foregroundColor(.white)
-                .clipShape(RoundedCorner(radius: 16, corners: [.topLeft, .topRight]))
-            Text(translation)
-                .font(.body)
-                .padding()
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.fromHex("#EEEEEE"))
-                .foregroundColor(.black)
-                .clipShape(RoundedCorner(radius: 16, corners: [.bottomLeft, .bottomRight]))
-        }
-    }
-}
-
 struct RoundedCorner: Shape {
     var radius: CGFloat = 16.0
     var corners: UIRectCorner = .allCorners
@@ -331,3 +327,94 @@ struct RoundedCorner: Shape {
         return Path(path.cgPath)
     }
 }
+
+// MARK: - Corner clipping for specific sides
+extension Shape {
+    func cgPathShape(corners: UIRectCorner, radius: CGFloat) -> some Shape {
+        CornerRadiusShape(corners: corners, radius: radius)
+    }
+}
+
+struct CornerRadiusShape: Shape {
+    var corners: UIRectCorner
+    var radius: CGFloat
+
+    func path(in rect: CGRect) -> Path {
+        let path = UIBezierPath(
+            roundedRect: rect,
+            byRoundingCorners: corners,
+            cornerRadii: CGSize(width: radius, height: radius)
+        )
+        return Path(path.cgPath)
+    }
+}
+
+// MARK: - New card with thumbnail
+
+struct TranslationCardView: View {
+    let title: String
+    let text: String
+    let thumbnailURL: String?
+
+    private let cardCorner: CGFloat = 16
+    private let thumbWidth: CGFloat = 120
+    private let cardHeight: CGFloat = 160   // fixed height
+
+    var body: some View {
+        HStack(spacing: 0) {
+            // Thumbnail
+            Group {
+                if let urlStr = thumbnailURL, let url = URL(string: urlStr) {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let img):
+                            img.resizable()
+                                .scaledToFill()
+                        case .failure(_):
+                            Color.black.opacity(0.05)
+                                .overlay(Image(systemName: "photo").imageScale(.large))
+                        case .empty:
+                            Color.black.opacity(0.05)
+                        @unknown default:
+                            Color.black.opacity(0.05)
+                        }
+                    }
+                } else {
+                    Color.black.opacity(0.05)
+                        .overlay(Image(systemName: "photo").imageScale(.large))
+                }
+            }
+            .frame(width: thumbWidth, height: cardHeight)
+            .clipShape(
+                RoundedRectangle(
+                    cornerRadius: cardCorner,
+                    style: .continuous
+                )
+                .path(in: CGRect(x: 0, y: 0, width: thumbWidth, height: cardHeight))
+                .strokedPath(.init(lineWidth: 0))
+                .cgPathShape(corners: [.topLeft, .bottomLeft], radius: cardCorner)
+            )
+
+            // Title + text
+            VStack(alignment: .leading, spacing: 0) {
+                Text(title)
+                    .font(.headline)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding()
+                    .foregroundColor(.white)
+                    .background(Color.fromHex("#FFA369"))
+
+                Text(text)
+                    .font(.body)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding()
+                    .foregroundColor(.black)
+                    .background(Color.fromHex("#EEEEEE"))
+            }
+            .frame(height: cardHeight)
+        }
+        .frame(height: cardHeight)
+        .clipShape(RoundedRectangle(cornerRadius: cardCorner, style: .continuous))
+    }
+}
+

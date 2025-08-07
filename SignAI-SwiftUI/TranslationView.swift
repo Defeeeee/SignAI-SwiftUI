@@ -12,11 +12,11 @@ struct TranslationView: View {
 
     var body: some View {
         ZStack(alignment: .top) {
-            // Scrollable translation log (logo is not part of this)
+            // Scrollable translation log (logo is fixed above)
             ScrollView {
                 VStack(spacing: 16) {
-                    // Add space so content doesn't sit under the fixed top logo
-                    Color.clear.frame(height: 56) // matches TopLogoBar total height (12 + 32 + 12)
+                    // Keep content clear of the fixed logo height (12 + 32 + 12 = 56)
+                    Color.clear.frame(height: 56)
 
                     if translations.isEmpty {
                         Text("No translations yet. Upload a video below to get started.")
@@ -27,10 +27,10 @@ struct TranslationView: View {
                     } else {
                         VStack(spacing: 16) {
                             ForEach(translations.reversed()) { item in
-                                TranslationResultView(
-                                    summary: item.title,
-                                    translation: item.text,
-                                    titleColor: Color.fromHex("#FFA369")
+                                TranslationCardView(
+                                    title: item.title,
+                                    text: item.text,
+                                    thumbnailURL: item.thumbnailURL
                                 )
                                 .padding(.horizontal)
                             }
@@ -51,14 +51,12 @@ struct TranslationView: View {
         .navigationBarBackButtonHidden(true)
         .safeAreaInset(edge: .bottom, spacing: 0) {
             VStack(spacing: 0) {
-                // visible room ABOVE the upload box
                 VStack(spacing: 6) {
                     Color.clear.frame(height: 12)
 
                     UploadBoxSmall()
                         .onTapGesture { uploader.showPicker = true }
                         .padding(.horizontal)
-                    
                     Color.clear.frame(height: 8)
 
                     Button {
@@ -103,8 +101,8 @@ struct TranslationView: View {
         }
         .photosPicker(isPresented: $uploader.showPicker, selection: $uploader.selectedItem, matching: .videos)
         .onChange(of: uploader.selectedItem) { _ in
-            uploader.processPicked { text, title in
-                translations.append(.init(text: text, title: title))
+            uploader.processPicked { text, title, thumb in
+                translations.append(.init(text: text, title: title, thumbnailURL: thumb))
             }
         }
         .overlay {
@@ -122,8 +120,7 @@ struct TranslationView: View {
     NavigationStack {
         TranslationView(
             translations: .constant([
-                .init(text: "Hola mundo", title: "Demo 1"),
-                .init(text: "Second sample translation", title: "Demo 2")
+                .init(text: "On Tuesdays, the region is especially known...", title: "Friendly tuesday", thumbnailURL: "https://example.com/thumb.jpg")
             ]),
             onHomeTap: {},
             onProfileTap: {},

@@ -9,18 +9,13 @@ struct MainView: View {
     var body: some View {
         NavigationStack(path: $path) {
             UploadView(
-                onTranslationReady: { text, title in
-                    history.append(.init(text: text, title: title ?? "Conversation"))
+                onTranslationReady: { text, title, thumb in
+                    history.append(.init(text: text, title: title ?? "Conversation", thumbnailURL: thumb))
                     if !path.contains(.translation) { path.append(.translation) }
                 },
                 onHomeTap: { path = [] },
-                onProfileTap: {
-                    // Always navigate to Translation, even if history is empty.
-                    path = [.translation]
-                },
-                onSettingsTap: {
-                    // hook up settings later if you want
-                }
+                onProfileTap: { path = [.translation] },
+                onSettingsTap: { }
             )
             .navigationDestination(for: Route.self) { route in
                 switch route {
@@ -29,7 +24,7 @@ struct MainView: View {
                         translations: $history,
                         onHomeTap: { path = [] },
                         onProfileTap: { path = [.translation] },
-                        onSettingsTap: { /* settings later */ }
+                        onSettingsTap: { }
                     )
                     .navigationBarBackButtonHidden(true)
                 }
@@ -39,19 +34,3 @@ struct MainView: View {
 }
 
 #Preview { MainView() }
-
-extension Color {
-    init(hex: String) {
-        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
-        var int: UInt64 = 0
-        Scanner(string: hex).scanHexInt64(&int)
-        let a, r, g, b: UInt64
-        switch hex.count {
-        case 3: (a, r, g, b) = (255, (int >> 8) * 17, (int >> 4 & 0xF) * 17, (int & 0xF) * 17)
-        case 6: (a, r, g, b) = (255, int >> 16, int >> 8 & 0xFF, int & 0xFF)
-        case 8: (a, r, g, b) = (int >> 24, int >> 16 & 0xFF, int >> 8 & 0xFF, int & 0xFF)
-        default: (a, r, g, b) = (255, 0, 0, 0)
-        }
-        self.init(.sRGB, red: Double(r)/255, green: Double(g)/255, blue: Double(b)/255, opacity: Double(a)/255)
-    }
-}

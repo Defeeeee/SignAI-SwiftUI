@@ -4,7 +4,7 @@ import PhotosUI
 struct UploadView: View {
     @StateObject private var uploader = UploadManager()
 
-    let onTranslationReady: (_ text: String, _ title: String?) -> Void
+    let onTranslationReady: (_ text: String, _ title: String?, _ thumbnailURL: String?) -> Void
     let onHomeTap: () -> Void
     let onProfileTap: () -> Void
     let onSettingsTap: () -> Void
@@ -12,10 +12,8 @@ struct UploadView: View {
     var body: some View {
         ZStack {
             VStack(spacing: 0) {
-                // Fixed logo at the top (closer to the top than before)
                 TopLogoBar()
 
-                // Headline
                 HStack {
                     Text("Click here to upload your video")
                         .font(Font.custom("Montserrat", size: 29).weight(.bold))
@@ -106,8 +104,8 @@ struct UploadView: View {
         }
         .photosPicker(isPresented: $uploader.showPicker, selection: $uploader.selectedItem, matching: .videos)
         .onChange(of: uploader.selectedItem) { _ in
-            uploader.processPicked { text, title in
-                onTranslationReady(text, title)
+            uploader.processPicked { text, title, thumb in
+                onTranslationReady(text, title, thumb)
             }
         }
     }
