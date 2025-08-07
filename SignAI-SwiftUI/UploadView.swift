@@ -33,14 +33,14 @@ struct UploadView: View {
                   .stroke(style: StrokeStyle(lineWidth: 3, dash: [10]))
                   .foregroundColor(Color(red: 1, green: 0.48, blue: 0))
               )
-            Image(systemName: "arrow.up.to.line")
+            Image(systemName: "icloud.and.arrow.up")
               .resizable()
               .scaledToFit()
               .frame(width: 48, height: 48)
               .foregroundColor(Color(red: 1, green: 0.48, blue: 0))
           }
           .padding(.top, 16)
-          .glassEffect(.regular, in: .rect(cornerRadius: 20))
+          // Removed glassEffect from this ZStack
           // Choose file button
           Button(action: {}) {
             Text("Choose file")
