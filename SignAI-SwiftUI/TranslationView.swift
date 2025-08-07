@@ -1,200 +1,133 @@
 import SwiftUI
-
-enum NavigationDestination: Hashable {
-    case upload, translation
-}
-
-struct SignAILogo: View {
-    var body: some View {
-        Image("SignAILOGO")
-            .resizable()
-            .scaledToFit()
-            .frame(height: 48)
-            .padding(.top, 24)
-    }
-}
-
-struct TranslationResultView: View {
-    let summary: String
-    let translation: String
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text(summary)
-                .font(.headline)
-                .padding()
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.orange.opacity(0.85))
-                .foregroundColor(.white)
-                .clipShape(RoundedCorner(radius: 16, corners: [.topLeft, .topRight]))
-            Text(translation)
-                .font(.body)
-                .padding()
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color(.systemGray6))
-                .foregroundColor(.primary)
-                .clipShape(RoundedCorner(radius: 16, corners: [.bottomLeft, .bottomRight]))
-        }
-        // Removed shadow to prevent black line
-    }
-}
+import PhotosUI
 
 struct TranslationView: View {
-    let translation: String
-    let title: String?
-    let onNavToUpload: () -> Void
-    let onNavToTranslation: () -> Void
-    @State private var navigation: NavigationDestination? = nil
-    
+    @Binding var translations: [TranslationPayload]
+
+    let onHomeTap: () -> Void
+    let onProfileTap: () -> Void
+    let onSettingsTap: () -> Void
+
+    @StateObject private var uploader = UploadManager()
+
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 32) {
-                SignAILogo()
-                    .frame(maxWidth: .infinity)
-                VStack(spacing: 20) {
-                    TranslationResultView(summary: title ?? "Summary", translation: translation)
-                }
-                .padding(.horizontal)
-                Spacer()
-                HStack {
-                    Spacer()
-                    VStack {
-                        UploadBoxSmall()
-                            .frame(maxWidth: 320)
-                            .padding(.top, 24)
-                        
-                        Button(action: {}) {
-                            Text("Choose file")
-                                .fontWeight(.bold)
-                                .foregroundColor(.white)
-                                .frame(height: 44)
-                                .frame(maxWidth: 320)
-                                .background(Color.orange)
-                                .cornerRadius(22)
+        ZStack(alignment: .top) {
+            // Scrollable translation log (logo is not part of this)
+            ScrollView {
+                VStack(spacing: 16) {
+                    // Add space so content doesn't sit under the fixed top logo
+                    Color.clear.frame(height: 56) // matches TopLogoBar total height (12 + 32 + 12)
+
+                    if translations.isEmpty {
+                        Text("No translations yet. Upload a video below to get started.")
+                            .font(.subheadline)
+                            .foregroundColor(.gray)
+                            .padding(.horizontal)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    } else {
+                        VStack(spacing: 16) {
+                            ForEach(translations.reversed()) { item in
+                                TranslationResultView(
+                                    summary: item.title,
+                                    translation: item.text,
+                                    titleColor: Color.fromHex("#FFA369")
+                                )
+                                .padding(.horizontal)
+                            }
                         }
-                        .padding(.top, 16)
-                        
+                    }
+
+                    // bottom padding so last card doesn't touch the pinned upload section
+                    Color.clear.frame(height: 24)
+                }
+                .padding(.top, 8)
+            }
+            .background(Color.white)
+
+            // Fixed top logo (same as upload view)
+            TopLogoBar()
+        }
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(true)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            VStack(spacing: 0) {
+                // visible room ABOVE the upload box
+                VStack(spacing: 6) {
+                    Color.clear.frame(height: 12)
+
+                    UploadBoxSmall()
+                        .onTapGesture { uploader.showPicker = true }
+                        .padding(.horizontal)
+                    
+                    Color.clear.frame(height: 8)
+
+                    Button {
+                        uploader.showPicker = true
+                    } label: {
+                        Text(uploader.showUploadingProgress ? "Uploading…" : "Choose file")
+                            .fontWeight(.bold)
+                            .foregroundColor(.white)
+                            .frame(height: 44)
+                            .frame(maxWidth: .infinity)
+                            .background(Color.fromHex("#FF7A00"))
+                            .cornerRadius(22)
+                    }
+                    .padding(.horizontal, 65)
+
+                    VStack(spacing: 2) {
                         Text("or click on the coloured area")
                             .font(.system(size: 10))
                             .foregroundColor(.gray)
-                            .padding(.top, 6)
+
+                        if let status = uploader.statusMessage {
+                            Text(status)
+                                .font(.footnote)
+                                .foregroundColor(.gray)
+                                .multilineTextAlignment(.center)
+                                .padding(.top, 2)
+                                .frame(maxWidth: .infinity)
+                        }
                     }
-                    Spacer()
+                    .padding(.bottom, 8)
                 }
-                Spacer()
-                
+                .background(Color.white)
+
                 BottomNavBar(
-                    onHomeTap: onNavToUpload,
-                    onProfileTap: onNavToTranslation
+                    onHomeTap: onHomeTap,
+                    onProfileTap: onProfileTap,
+                    onSettingsTap: onSettingsTap,
+                    backgroundColor: Color.fromHex("#FF7A00")
                 )
             }
-            .padding(.top, 8)
-            .background(Color.white)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .navigationDestination(for: NavigationDestination.self) { destination in
-                switch destination {
-                case .upload:
-                    UploadView(onNavToTranslation: onNavToTranslation, onNavToUpload: onNavToUpload)
-                        .navigationBarBackButtonHidden(true)
-                case .translation:
-                    TranslationView(
-                        translation: translation,
-                        title: title,
-                        onNavToUpload: onNavToUpload,
-                        onNavToTranslation: onNavToTranslation
-                    )
-                    .navigationBarBackButtonHidden(true)
-                }
+            .zIndex(10)
+        }
+        .photosPicker(isPresented: $uploader.showPicker, selection: $uploader.selectedItem, matching: .videos)
+        .onChange(of: uploader.selectedItem) { _ in
+            uploader.processPicked { text, title in
+                translations.append(.init(text: text, title: title))
             }
         }
-    }
-}
-
-struct RoundedCorner: Shape {
-    var radius: CGFloat = 16.0
-    var corners: UIRectCorner = .allCorners
-
-    func path(in rect: CGRect) -> Path {
-        let path = UIBezierPath(
-            roundedRect: rect,
-            byRoundingCorners: corners,
-            cornerRadii: CGSize(width: radius, height: radius)
-        )
-        return Path(path.cgPath)
-    }
-}
-
-struct UploadBoxSmall: View {
-    var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        gradient: Gradient(colors: [
-                            Color(red: 1, green: 0.82, blue: 0.77),
-                            Color(red: 1, green: 0.96, blue: 0.78),
-                            Color(red: 1, green: 0.79, blue: 0.56)
-                        ]),
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .frame(height: 72)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(style: StrokeStyle(lineWidth: 2, dash: [8]))
-                        .foregroundColor(Color.orange)
-                )
-            Image(systemName: "icloud.and.arrow.up")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 28, height: 28)
-                .foregroundColor(Color.orange)
-        }
-        .frame(maxWidth: 320)
-    }
-}
-
-struct BottomNavBar: View {
-    let onHomeTap: () -> Void
-    let onProfileTap: () -> Void
-    
-    var body: some View {
-        HStack {
-            Spacer()
-            Image(systemName: "gearshape")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 24, height: 24)
-                .foregroundColor(.white)
-            Spacer()
-            Button(action: onHomeTap) {
-                Image(systemName: "house")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 24, height: 24)
-                    .foregroundColor(.white)
+        .overlay {
+            if uploader.showUploadingScreen {
+                UploadingProgressView(statusMessage: uploader.statusMessage)
+            } else if uploader.showUploadingProgress {
+                UploadingProgressView(statusMessage: uploader.statusMessage)
+                    .opacity(0.98)
             }
-            Spacer()
-            Button(action: onProfileTap) {
-                Image(systemName: "person.circle")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 24, height: 24)
-                    .foregroundColor(.white)
-            }
-            Spacer()
         }
-        .frame(height: 60)
-        .background(Color.orange.opacity(0.85))
-        .ignoresSafeArea(edges: .bottom)
     }
 }
 
 #Preview {
-    TranslationView(
-        translation: "On Tuesdays, the region is especially known for being more friendly and staying open longer, but also for having showers.",
-        title: "Friendly tuesday",
-        onNavToUpload: {},
-        onNavToTranslation: {}
-    )
+    NavigationStack {
+        TranslationView(
+            translations: .constant([
+                .init(text: "Hola mundo", title: "Demo 1"),
+                .init(text: "Second sample translation", title: "Demo 2")
+            ]),
+            onHomeTap: {},
+            onProfileTap: {},
+            onSettingsTap: {}
+        )
+    }
 }
