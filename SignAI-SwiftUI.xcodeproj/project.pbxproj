@@ -6,13 +6,31 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		DD81AD452E4424140066FBC2 /* Montserrat-VariableFont_wght.ttf in Resources */ = {isa = PBXBuildFile; fileRef = DD81AD442E4424140066FBC2 /* Montserrat-VariableFont_wght.ttf */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
+		DD81AD442E4424140066FBC2 /* Montserrat-VariableFont_wght.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Montserrat-VariableFont_wght.ttf"; sourceTree = "<group>"; };
 		DDC870052E4416B900811015 /* SignAI-SwiftUI.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "SignAI-SwiftUI.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		DD81AD472E44244B0066FBC2 /* Exceptions for "SignAI-SwiftUI" folder in "SignAI-SwiftUI" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = DDC870042E4416B900811015 /* SignAI-SwiftUI */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		DDC870072E4416B900811015 /* SignAI-SwiftUI */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				DD81AD472E44244B0066FBC2 /* Exceptions for "SignAI-SwiftUI" folder in "SignAI-SwiftUI" target */,
+			);
 			path = "SignAI-SwiftUI";
 			sourceTree = "<group>";
 		};
@@ -32,6 +50,7 @@
 		DDC86FFC2E4416B900811015 = {
 			isa = PBXGroup;
 			children = (
+				DD81AD442E4424140066FBC2 /* Montserrat-VariableFont_wght.ttf */,
 				DDC870072E4416B900811015 /* SignAI-SwiftUI */,
 				DDC870062E4416B900811015 /* Products */,
 			);
@@ -109,6 +128,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				DD81AD452E4424140066FBC2 /* Montserrat-VariableFont_wght.ttf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -256,6 +276,7 @@
 				DEVELOPMENT_TEAM = 73D7XMRQAB;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "SignAI-SwiftUI/Info.plist";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -288,6 +309,7 @@
 				DEVELOPMENT_TEAM = 73D7XMRQAB;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "SignAI-SwiftUI/Info.plist";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

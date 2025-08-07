@@ -22,37 +22,32 @@ struct MainView: View {
                     .padding(.top, 36)
                     .padding(.bottom, 24)
 
-                Spacer()
-
-                // Headline text vertically centered above buttons
+                // Headline text placed directly below logo
                 VStack(alignment: .leading, spacing: 0) {
-                    // Using system font with weight .heavy because Font.custom weight is often ignored
-                    // unless custom font files are correctly imported and registered.
+                    // Using custom Montserrat font - font weights require the appropriate Montserrat weights to be bundled in the project.
                     Text("Your free to use\nsign language translator.")
-                        .font(.system(size: 32, weight: .heavy))
+                        .font(Font.custom("Montserrat", size: 32).weight(.bold))
                         .foregroundColor(Color.orange)
                     (
                         Text("Powered by ")
-                            .font(.system(size: 32, weight: .heavy))
+                            .font(Font.custom("Montserrat", size: 32).weight(.regular))
                             .foregroundColor(Color(red: 0.77, green: 0.13, blue: 0.58))
                         +
                         Text("AI.")
-                            .font(.system(size: 32, weight: .heavy))
+                            .font(Font.custom("Montserrat", size: 32).weight(.regular))
                             .foregroundColor(Color.gray)
                     )
                 }
                 .padding(.horizontal, 32)
 
-                Spacer()
-
-                // Buttons placed visually in the lower third (not pinned)
+                // Buttons placed directly below the headline text
                 HStack(spacing: 18) {
                     Button(action: { showUpload = true }) {
                         HStack {
                             Text("Start")
+                                .font(Font.custom("Montserrat", size: 18).weight(.bold))
                             Image(systemName: "arrow.right")
                         }
-                        .font(.system(size: 18, weight: .bold))
                         .foregroundColor(.white)
                         .frame(width: 120, height: 44)
                         .background(Color.orange)
@@ -63,9 +58,9 @@ struct MainView: View {
                     Button(action: { /* Sign-in action */ }) {
                         HStack {
                             Text("Sign-in")
+                                .font(Font.custom("Montserrat", size: 18).weight(.bold))
                             Image(systemName: "arrow.right")
                         }
-                        .font(.system(size: 18, weight: .bold))
                         .foregroundColor(Color.orange)
                         .frame(width: 120, height: 44)
                         .overlay(
@@ -76,6 +71,8 @@ struct MainView: View {
                     .buttonStyle(PlainButtonStyle())
                 }
                 .padding(.bottom, 52)
+
+                Spacer()
             }
             .fullScreenCover(isPresented: $showUpload) {
                 UploadView()

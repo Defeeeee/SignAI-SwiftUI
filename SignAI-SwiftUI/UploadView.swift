@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct ContentView: View {
+struct UploadView: View {
   var body: some View {
     VStack(spacing: 0) {
       // Logo at the top
@@ -13,7 +13,7 @@ struct ContentView: View {
       // Upload prompt
       HStack {
         Text("Click here to upload your video")
-          .font(Font.custom("Montserrat", size: 29).weight(.black))
+          .font(Font.custom("Montserrat", size: 29).weight(.bold))
           .foregroundColor(Color(red: 1, green: 0.48, blue: 0))
         Spacer()
       }
@@ -92,9 +92,9 @@ struct ContentView: View {
   }
 }
 
-struct ContentView_Previews: PreviewProvider {
+struct UploadView_Previews: PreviewProvider {
   static var previews: some View {
-    ContentView()
+    UploadView()
   }
 }
 
