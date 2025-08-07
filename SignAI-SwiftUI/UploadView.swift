@@ -7,7 +7,7 @@ struct UploadView: View {
       Image("SignAILOGO")
         .resizable()
         .scaledToFit()
-        .frame(width: 140, height: 50)
+        .frame(height: 32)
         .padding(.top, 36)
         .padding(.bottom, 16)
       // Upload prompt
@@ -97,4 +97,3 @@ struct UploadView_Previews: PreviewProvider {
     UploadView()
   }
 }
-
