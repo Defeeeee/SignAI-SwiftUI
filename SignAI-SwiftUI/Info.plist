@@ -6,5 +6,7 @@
 	<array>
 		<string>Montserrat-VariableFont_wght.ttf</string>
 	</array>
+	<key>CFBundleDisplayName</key>
+	<string>SignAI</string>
 </dict>
 </plist>
