@@ -50,8 +50,30 @@ final class SpeechCenter: NSObject, ObservableObject, AVSpeechSynthesizerDelegat
         synth.delegate = self
     }
 
+    /// Configure audio to come out of the device speaker (even in silent mode).
+    private func activateAudioSession() {
+        let session = AVAudioSession.sharedInstance()
+        do {
+            // .playback routes to the speaker by default when no headphones are connected,
+            // ignores the Silent switch, and is appropriate for TTS.
+            // .spokenAudio optimizes ducking and Siri-like behavior.
+            try session.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
+            try session.setActive(true, options: [])
+        } catch {
+            // If anything fails, we still let AVSpeech try with whatever the system has.
+            // You can log error.localizedDescription if desired.
+        }
+    }
+
+    private func deactivateAudioSession() {
+        let session = AVAudioSession.sharedInstance()
+        do {
+            try session.setActive(false, options: [.notifyOthersOnDeactivation])
+        } catch { }
+    }
+
     func speak(text: String, for id: UUID, locale: String = "en-US") {
-        // If tapping the same card while it’s speaking, toggle pause/resume quickly.
+        // Toggle pause/resume if same card
         if currentId == id, isSpeaking, !isPaused {
             pause()
             return
@@ -61,6 +83,8 @@ final class SpeechCenter: NSObject, ObservableObject, AVSpeechSynthesizerDelegat
         }
 
         stop()
+
+        activateAudioSession()
 
         let utt = AVSpeechUtterance(string: text)
         utt.voice = AVSpeechSynthesisVoice(language: locale)
@@ -89,6 +113,7 @@ final class SpeechCenter: NSObject, ObservableObject, AVSpeechSynthesizerDelegat
         isSpeaking = false
         isPaused = false
         currentId = nil
+        deactivateAudioSession()
     }
 
     // MARK: - AVSpeechSynthesizerDelegate
@@ -118,7 +143,8 @@ final class UploadManager: ObservableObject {
     // Endpoints / config
     let cloudinaryURL = URL(string: "https://api.cloudinary.com/v1_1/dzonya1wx/video/upload")!
     let uploadPreset = "signai"
-    let translateBase = "https://signai.fdiaznem.com.ar/predict_gemini?video_url="
+    // UPDATED: new API base
+    let translateBase = "https://aiapi.signai.ar/predict_gemini?video_url="
 
     func processPicked(completion: @escaping (_ text: String, _ title: String, _ thumbnailURL: String?) -> Void) {
         guard let item = selectedItem else { return }
@@ -398,7 +424,7 @@ struct TranslationCardView: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            // Thumbnail (clipped to left corners only)
+            // Thumbnail
             Group {
                 if let urlStr = thumbnailURL, let url = URL(string: urlStr) {
                     AsyncImage(url: url) { phase in
@@ -429,7 +455,6 @@ struct TranslationCardView: View {
                         .lineLimit(1)
                         .truncationMode(.tail)
                     Spacer()
-                    // Play/Pause/Resume
                     Button {
                         speech.speak(text: text, for: cardId)
                     } label: {
@@ -442,7 +467,6 @@ struct TranslationCardView: View {
                         )
                         .foregroundColor(.white)
                     }
-                    // Stop
                     Button {
                         if speech.currentId == cardId { speech.stop() }
                     } label: {
