@@ -1,6 +1,7 @@
 import SwiftUI
 import PhotosUI
 import Combine
+import AVFoundation
 
 // MARK: - Helpers
 
@@ -31,7 +32,76 @@ struct TranslationPayload: Hashable, Identifiable {
     var id = UUID()
     let text: String
     let title: String
-    let thumbnailURL: String?   // NEW
+    let thumbnailURL: String?
+}
+
+// MARK: - Speech (shared)
+
+@MainActor
+final class SpeechCenter: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
+    @Published var currentId: UUID? = nil
+    @Published var isSpeaking: Bool = false
+    @Published var isPaused: Bool = false
+
+    private let synth = AVSpeechSynthesizer()
+
+    override init() {
+        super.init()
+        synth.delegate = self
+    }
+
+    func speak(text: String, for id: UUID, locale: String = "en-US") {
+        // If tapping the same card while it’s speaking, toggle pause/resume quickly.
+        if currentId == id, isSpeaking, !isPaused {
+            pause()
+            return
+        } else if currentId == id, isPaused {
+            resume()
+            return
+        }
+
+        stop()
+
+        let utt = AVSpeechUtterance(string: text)
+        utt.voice = AVSpeechSynthesisVoice(language: locale)
+        utt.rate = 0.48
+        utt.pitchMultiplier = 1.0
+        utt.postUtteranceDelay = 0.0
+
+        currentId = id
+        synth.speak(utt)
+    }
+
+    func pause() {
+        guard synth.isSpeaking else { return }
+        synth.pauseSpeaking(at: .word)
+        isPaused = true
+    }
+
+    func resume() {
+        guard isPaused else { return }
+        synth.continueSpeaking()
+        isPaused = false
+    }
+
+    func stop() {
+        if synth.isSpeaking { synth.stopSpeaking(at: .immediate) }
+        isSpeaking = false
+        isPaused = false
+        currentId = nil
+    }
+
+    // MARK: - AVSpeechSynthesizerDelegate
+    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didStart utterance: AVSpeechUtterance) {
+        isSpeaking = true
+        isPaused = false
+    }
+    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
+        stop()
+    }
+    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
+        stop()
+    }
 }
 
 // MARK: - Uploader (shared logic)
@@ -114,7 +184,6 @@ final class UploadManager: ObservableObject {
             showUploadingProgress = false
             showUploadingScreen = true
 
-            // Try to derive a thumbnail URL from the Cloudinary secure URL
             let thumb = deriveCloudinaryThumbnail(fromSecureURL: secureUrl)
 
             await fetchTranslation(for: secureUrl) { text, title in
@@ -160,14 +229,12 @@ final class UploadManager: ObservableObject {
     /// Cloudinary trick: insert `/so_1/` (seek to 1s) and change the extension to `.jpg`.
     private func deriveCloudinaryThumbnail(fromSecureURL secureUrl: String) -> String? {
         var result = secureUrl.replacingOccurrences(of: "/upload/", with: "/upload/so_1/")
-        // swap common video extensions for .jpg
         for ext in [".mp4", ".mov", ".m4v", ".webm"] {
             if result.lowercased().hasSuffix(ext) {
                 result = String(result.dropLast(ext.count)) + ".jpg"
                 return result
             }
         }
-        // if no known ext—leave as-is; Cloudinary may still serve a frame via .jpg suffix
         return result + ".jpg"
     }
 }
@@ -315,94 +382,76 @@ struct UploadingProgressView: View {
     }
 }
 
-struct RoundedCorner: Shape {
-    var radius: CGFloat = 16.0
-    var corners: UIRectCorner = .allCorners
-    func path(in rect: CGRect) -> Path {
-        let path = UIBezierPath(
-            roundedRect: rect,
-            byRoundingCorners: corners,
-            cornerRadii: CGSize(width: radius, height: radius)
-        )
-        return Path(path.cgPath)
-    }
-}
-
-// MARK: - Corner clipping for specific sides
-extension Shape {
-    func cgPathShape(corners: UIRectCorner, radius: CGFloat) -> some Shape {
-        CornerRadiusShape(corners: corners, radius: radius)
-    }
-}
-
-struct CornerRadiusShape: Shape {
-    var corners: UIRectCorner
-    var radius: CGFloat
-
-    func path(in rect: CGRect) -> Path {
-        let path = UIBezierPath(
-            roundedRect: rect,
-            byRoundingCorners: corners,
-            cornerRadii: CGSize(width: radius, height: radius)
-        )
-        return Path(path.cgPath)
-    }
-}
-
-// MARK: - New card with thumbnail
+// MARK: - Translation card with thumbnail + speech controls
 
 struct TranslationCardView: View {
+    let cardId: UUID
     let title: String
     let text: String
     let thumbnailURL: String?
 
+    @EnvironmentObject private var speech: SpeechCenter
+
     private let cardCorner: CGFloat = 16
     private let thumbWidth: CGFloat = 120
-    private let cardHeight: CGFloat = 160   // fixed height
+    private let cardHeight: CGFloat = 160
 
     var body: some View {
         HStack(spacing: 0) {
-            // Thumbnail
+            // Thumbnail (clipped to left corners only)
             Group {
                 if let urlStr = thumbnailURL, let url = URL(string: urlStr) {
                     AsyncImage(url: url) { phase in
                         switch phase {
-                        case .success(let img):
-                            img.resizable()
-                                .scaledToFill()
-                        case .failure(_):
-                            Color.black.opacity(0.05)
-                                .overlay(Image(systemName: "photo").imageScale(.large))
-                        case .empty:
-                            Color.black.opacity(0.05)
-                        @unknown default:
-                            Color.black.opacity(0.05)
+                        case .success(let img): img.resizable().scaledToFill()
+                        case .failure(_): Color.black.opacity(0.05).overlay(Image(systemName: "photo").imageScale(.large))
+                        case .empty: Color.black.opacity(0.05)
+                        @unknown default: Color.black.opacity(0.05)
                         }
                     }
                 } else {
-                    Color.black.opacity(0.05)
-                        .overlay(Image(systemName: "photo").imageScale(.large))
+                    Color.black.opacity(0.05).overlay(Image(systemName: "photo").imageScale(.large))
                 }
             }
             .frame(width: thumbWidth, height: cardHeight)
-            .clipShape(
-                RoundedRectangle(
-                    cornerRadius: cardCorner,
-                    style: .continuous
-                )
-                .path(in: CGRect(x: 0, y: 0, width: thumbWidth, height: cardHeight))
-                .strokedPath(.init(lineWidth: 0))
-                .cgPathShape(corners: [.topLeft, .bottomLeft], radius: cardCorner)
+            .clipped()
+            .mask(
+                CornerRadiusShape(corners: [.topLeft, .bottomLeft], radius: cardCorner)
+                    .path(in: CGRect(x: 0, y: 0, width: thumbWidth, height: cardHeight))
             )
 
-            // Title + text
+            // Title + text + speech controls
             VStack(alignment: .leading, spacing: 0) {
-                Text(title)
-                    .font(.headline)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding()
-                    .foregroundColor(.white)
-                    .background(Color.fromHex("#FFA369"))
+                HStack(spacing: 8) {
+                    Text(title)
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                    Spacer()
+                    // Play/Pause/Resume
+                    Button {
+                        speech.speak(text: text, for: cardId)
+                    } label: {
+                        Image(systemName:
+                                (speech.currentId == cardId && speech.isSpeaking && !speech.isPaused)
+                                ? "pause.fill"
+                                : (speech.currentId == cardId && speech.isPaused)
+                                ? "play.fill"
+                                : "speaker.wave.2.fill"
+                        )
+                        .foregroundColor(.white)
+                    }
+                    // Stop
+                    Button {
+                        if speech.currentId == cardId { speech.stop() }
+                    } label: {
+                        Image(systemName: "stop.fill")
+                            .foregroundColor(.white)
+                    }
+                }
+                .padding()
+                .background(Color.fromHex("#FFA369"))
 
                 Text(text)
                     .font(.body)
@@ -418,3 +467,16 @@ struct TranslationCardView: View {
     }
 }
 
+// Corner-radius shape for masking specific corners
+struct CornerRadiusShape: Shape {
+    var corners: UIRectCorner
+    var radius: CGFloat
+    func path(in rect: CGRect) -> Path {
+        let path = UIBezierPath(
+            roundedRect: rect,
+            byRoundingCorners: corners,
+            cornerRadii: CGSize(width: radius, height: radius)
+        )
+        return Path(path.cgPath)
+    }
+}

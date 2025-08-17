@@ -12,11 +12,10 @@ struct TranslationView: View {
 
     var body: some View {
         ZStack(alignment: .top) {
-            // Scrollable translation log (logo is fixed above)
+            // Scrollable translation log (logo fixed above)
             ScrollView {
                 VStack(spacing: 16) {
-                    // Keep content clear of the fixed logo height (12 + 32 + 12 = 56)
-                    Color.clear.frame(height: 56)
+                    Color.clear.frame(height: 56) // room for TopLogoBar
 
                     if translations.isEmpty {
                         Text("No translations yet. Upload a video below to get started.")
@@ -28,6 +27,7 @@ struct TranslationView: View {
                         VStack(spacing: 16) {
                             ForEach(translations.reversed()) { item in
                                 TranslationCardView(
+                                    cardId: item.id,
                                     title: item.title,
                                     text: item.text,
                                     thumbnailURL: item.thumbnailURL
@@ -37,15 +37,13 @@ struct TranslationView: View {
                         }
                     }
 
-                    // bottom padding so last card doesn't touch the pinned upload section
-                    Color.clear.frame(height: 24)
+                    Color.clear.frame(height: 24) // keep away from upload area
                 }
                 .padding(.top, 8)
             }
             .background(Color.white)
 
-            // Fixed top logo (same as upload view)
-            TopLogoBar()
+            TopLogoBar() // fixed logo
         }
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
@@ -57,7 +55,6 @@ struct TranslationView: View {
                     UploadBoxSmall()
                         .onTapGesture { uploader.showPicker = true }
                         .padding(.horizontal)
-                    Color.clear.frame(height: 8)
 
                     Button {
                         uploader.showPicker = true
@@ -119,9 +116,7 @@ struct TranslationView: View {
 #Preview {
     NavigationStack {
         TranslationView(
-            translations: .constant([
-                .init(text: "On Tuesdays, the region is especially known...", title: "Friendly tuesday", thumbnailURL: "https://example.com/thumb.jpg")
-            ]),
+            translations: .constant([]),
             onHomeTap: {},
             onProfileTap: {},
             onSettingsTap: {}

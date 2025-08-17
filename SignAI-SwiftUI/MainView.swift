@@ -5,6 +5,7 @@ enum Route: Hashable { case translation }
 struct MainView: View {
     @State private var path: [Route] = []
     @State private var history: [TranslationPayload] = []
+    @StateObject private var speech = SpeechCenter()
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -30,6 +31,7 @@ struct MainView: View {
                 }
             }
         }
+        .environmentObject(speech)
     }
 }
 
