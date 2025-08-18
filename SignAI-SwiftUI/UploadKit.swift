@@ -54,12 +54,19 @@ final class SpeechCenter: NSObject, ObservableObject, AVSpeechSynthesizerDelegat
     private func activateAudioSession() {
         let session = AVAudioSession.sharedInstance()
         do {
-            try session.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
+            // Use playAndRecord so system screen recording can capture app audio.
+            // Route to speaker by default, and still allow Bluetooth if present.
+            try session.setCategory(
+                .playAndRecord,
+                mode: .default,
+                options: [.defaultToSpeaker, .mixWithOthers, .allowBluetoothHFP, .allowBluetoothA2DP]
+            )
             try session.setActive(true, options: [])
         } catch {
-            // Optional: print(error.localizedDescription)
+            // Optional: print("AudioSession error: \(error.localizedDescription)")
         }
     }
+
 
     private func deactivateAudioSession() {
         let session = AVAudioSession.sharedInstance()
