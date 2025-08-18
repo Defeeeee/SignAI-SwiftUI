@@ -50,37 +50,27 @@ final class SpeechCenter: NSObject, ObservableObject, AVSpeechSynthesizerDelegat
         synth.delegate = self
     }
 
-    /// Configure audio to come out of the device speaker (even in silent mode).
+    /// Configure audio so speech is captured in screen recordings and routes to speaker by default.
     private func activateAudioSession() {
         let session = AVAudioSession.sharedInstance()
         do {
-            // Use playAndRecord so system screen recording can capture app audio.
-            // Route to speaker by default, and still allow Bluetooth if present.
             try session.setCategory(
                 .playAndRecord,
                 mode: .default,
                 options: [.defaultToSpeaker, .mixWithOthers, .allowBluetoothHFP, .allowBluetoothA2DP]
             )
             try session.setActive(true, options: [])
-        } catch {
-            // Optional: print("AudioSession error: \(error.localizedDescription)")
-        }
-    }
-
-
-    private func deactivateAudioSession() {
-        let session = AVAudioSession.sharedInstance()
-        do {
-            try session.setActive(false, options: [.notifyOthersOnDeactivation])
         } catch { }
     }
 
+    private func deactivateAudioSession() {
+        let session = AVAudioSession.sharedInstance()
+        do { try session.setActive(false, options: [.notifyOthersOnDeactivation]) } catch { }
+    }
+
     func speak(text: String, for id: UUID, locale: String = "en-US") {
-        if currentId == id, isSpeaking, !isPaused {
-            pause(); return
-        } else if currentId == id, isPaused {
-            resume(); return
-        }
+        if currentId == id, isSpeaking, !isPaused { pause(); return }
+        if currentId == id, isPaused { resume(); return }
 
         stop()
         activateAudioSession()
@@ -138,7 +128,7 @@ final class UploadManager: ObservableObject {
     // Endpoints / config
     let cloudinaryURL = URL(string: "https://api.cloudinary.com/v1_1/dzonya1wx/video/upload")!
     let uploadPreset = "signai"
-    /// UPDATED: new API base
+    /// UPDATED API base
     let translateBase = "https://aiapi.signai.ar/predict_gemini?video_url="
 
     func processPicked(completion: @escaping (_ text: String, _ title: String, _ thumbnailURL: String?) -> Void) {
@@ -247,7 +237,7 @@ final class UploadManager: ObservableObject {
         }
     }
 
-    /// Cloudinary trick: insert `/so_1/` (seek to 1s) and change the extension to `.jpg`.
+    /// Cloudinary trick: insert `/so_1/` (seek to 1s) and change extension to `.jpg`.
     private func deriveCloudinaryThumbnail(fromSecureURL secureUrl: String) -> String? {
         var result = secureUrl.replacingOccurrences(of: "/upload/", with: "/upload/so_1/")
         for ext in [".mp4", ".mov", ".m4v", ".webm"] {
@@ -415,6 +405,7 @@ struct TranslationCardView: View {
 
     private let cardCorner: CGFloat = 16
     private let thumbWidth: CGFloat = 120
+    private let iconOrange = Color.fromHex("#FFA369") // same as title strip
 
     @State private var contentHeight: CGFloat = 160 // updated to actual height at runtime
 
@@ -458,6 +449,8 @@ struct TranslationCardView: View {
                     .lineLimit(1)
                     .truncationMode(.tail)
                 Spacer()
+
+                // Rounded white TTS control (toggle play/pause/resume)
                 Button {
                     speech.speak(text: text, for: cardId)
                 } label: {
@@ -468,13 +461,21 @@ struct TranslationCardView: View {
                             ? "play.fill"
                             : "speaker.wave.2.fill"
                     )
-                    .foregroundColor(.white)
+                    .foregroundColor(iconOrange)
+                    .padding(8)
+                    .background(Color.white)
+                    .clipShape(Circle())
                 }
+
+                // Stop button, same styling
                 Button {
                     if speech.currentId == cardId { speech.stop() }
                 } label: {
                     Image(systemName: "stop.fill")
-                        .foregroundColor(.white)
+                        .foregroundColor(iconOrange)
+                        .padding(8)
+                        .background(Color.white)
+                        .clipShape(Circle())
                 }
             }
             .padding()
